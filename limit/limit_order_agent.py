@@ -29,32 +29,12 @@ class LimitOrderAgent:
         self.orders.append((action, product_id, amount, limit))
 
     def execute_held_orders(self, current_price: float):
+        orders_to_remove = []
         for order in self.orders:
             action, product_id, amount, limit = order
-            if action == 'BUY' and current_price <= limit:
-                self.execution_client.execute_order(action, product_id, amount, current_price)
-                self.orders.remove(order)
-            elif action == 'SELL' and current_price >= limit:
-                self.execution_client.execute_order(action, product_id, amount, current_price)
-                self.orders.remove(order)
+            if (action == 'BUY' and current_price <= limit) or (action == 'SELL' and current_price >= limit):
+                self.execution_client.execute_held_orders(action, product_id, amount, current_price)
+                orders_to_remove.append(order)  
+        for order in orders_to_remove:
+            self.orders.remove(order)
 
-
-if __name__ == "__main__":
-    class MockExecutionClient:
-        def execute_order(self, action, product_id, amount, price):
-            print(f"Executing order: {action} {amount} shares of {product_id} at {price}")
-
-    execution_client = MockExecutionClient()
-    agent = LimitOrderAgent(execution_client)
-
-    
-    agent.price_tick('IBM', 99)  
-    agent.price_tick('IBM', 101)  
-
-    
-    agent.add_order('BUY', 'IBM', 500, 98)
-    agent.add_order('SELL', 'IBM', 500, 102)
-
-    agent.execute_held_orders(98)  
-    agent.execute_held_orders(101)  
-    agent.execute_held_orders(102)  
